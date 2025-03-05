@@ -1,0 +1,189 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <limits>
+#include <iomanip>
+#include <memory>
+
+using namespace std;
+
+// ---------------------- Product Class ---------------------- 
+class Product {
+public:
+    int id;
+    string name;
+    double price;
+
+    Product(int id, string name, double price) : id(id), name(name), price(price) {}
+
+    void displayDetails() const {
+        cout << endl;
+        cout << id << "\t" << name << "\t$" << price << endl;
+    }
+};
+
+// ---------------------- ShoppingCart Class ----------------------
+class ShoppingCart {
+private:
+    map<int, int> cartItems;
+    vector<shared_ptr<Product>> products;
+
+public:
+    ShoppingCart(vector<shared_ptr<Product>> productList) : products(productList) {}
+
+    void displayProducts() const {
+        cout << endl;
+        cout << left << setw(12) << "Product ID" << setw(20) << "Name" << setw(10) << "Price" << endl;
+        cout << "-------------------------------------------------" << endl;
+
+        for (const auto& p : products) {
+            cout << left << setw(12) << p->id << setw(20) << p->name << "$" << fixed << setprecision(2) << p->price << endl;
+        }
+    }
+
+    bool addProduct(int productId) {
+        for (const auto& p : products) {
+            if (p->id == productId) {
+                cartItems[productId]++;
+                cout << "\033[32mProduct added successfully!\033[0m\n" << endl;
+                return true;
+            }
+        }
+        cout << "\033[31mInvalid Product ID!\033[0m\n" << endl;
+        return false;
+    }
+
+    void viewCart() const {
+        if (cartItems.empty()) {
+            cout << "\033[31mYour cart is empty!\033[0m\n" << endl;
+            return;
+        }
+
+        cout << "\nShopping Cart:\n";
+        cout << left << setw(12) << "Product ID" << setw(20) << "Name" << setw(10) << "Price" << "Quantity" << endl;
+        cout << "-------------------------------------------------" << endl;
+        double total = 0.0;
+
+        for (const auto& item : cartItems) {
+            for (const auto& p : products) {
+                if (p->id == item.first) {
+                    cout << left << setw(12) << p->id << setw(20) << p->name << "$" << fixed << setprecision(2) << p->price << " " << item.second << endl;
+                    total += p->price * item.second;
+                    break;
+                }
+            }
+        }
+        cout << "Total: $" << total << endl;
+    }
+
+    void clearCart() { cartItems.clear(); }
+
+    map<int, int> getCartItems() const { return cartItems; }
+    double getTotalPrice() const {
+        double total = 0.0;
+        for (const auto& item : cartItems) {
+            for (const auto& p : products) {
+                if (p->id == item.first) {
+                    total += p->price * item.second;
+                    break;
+                }
+            }
+        }
+        return total;
+    }
+};
+
+// ---------------------- Order Class ----------------------
+class Order {
+private:
+    static int orderCount;
+    int orderId;
+    map<int, int> orderItems;
+    double total;
+
+public:
+    Order(const ShoppingCart& cart) : orderId(++orderCount), orderItems(cart.getCartItems()), total(cart.getTotalPrice()) {}
+
+    void displayOrder(const vector<shared_ptr<Product>>& products) const {
+        cout << "\nOrder ID: " << orderId << endl;
+        cout << left << setw(12) << "Product ID" << setw(20) << "Quantity" << setw(10) << "Price" << endl;
+        cout << "-------------------------------------------------" << endl;
+
+        for (const auto& item : orderItems) {
+            for (const auto& p : products) {
+                if (p->id == item.first) {
+                    cout << left << setw(12) << p->id << setw(20) << item.second << "$" << fixed << setprecision(2) << p->price << endl;
+                    break;
+                }
+            }
+        }
+
+        cout << "-------------------------------------------------" << endl;
+        cout << "Total: $" << fixed << setprecision(2) << total << endl;
+        cout << "\033[32mYou have successfully checked out the products!\033[0m\n" << endl;
+    }
+};
+
+int Order::orderCount = 0;
+
+// ---------------------- Input Validation Function ----------------------
+template <typename T>
+void getValidInput(T &input, const string &prompt) {
+    while (true) {
+        cout << prompt;
+        cin >> input;
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "\033[31mInvalid input! Please enter a valid value.\033[0m\n" << endl;
+        } else {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            break;
+        }
+    }
+}
+
+void getValidInput(char &input, const string &prompt) {
+    while (true) {
+        cout << prompt;
+        string temp;
+        getline(cin, temp);
+        if (temp.length() == 1 && (temp[0] == 'Y' || temp[0] == 'y' || temp[0] == 'N' || temp[0] == 'n')) {
+            input = temp[0];
+            break;
+        }
+        cout << "\033[31mInvalid input! Please enter 'Y' or 'N'.\033[0m\n" << endl;
+    }
+}
+
+// ---------------------- Main Menu ----------------------
+int main() {
+    vector<shared_ptr<Product>> products = {
+        make_shared<Product>(1, "Notebook", 0.28),
+        make_shared<Product>(2, "Ballpen", 0.09),
+        make_shared<Product>(3, "Paper (Per Pad)", 0.28),
+        make_shared<Product>(4, "Pencil", 0.15),
+        make_shared<Product>(5, "Eraser", 0.11),
+        make_shared<Product>(6, "Sharpener", 0.6),
+    };
+
+    ShoppingCart cart(products);
+    vector<Order> orders;
+    int choice;
+
+    do {
+        getValidInput(choice, "\nMenu:\n1. View Products\n2. View Shopping Cart\n3. Exit\nEnter choice: ");
+
+        if (choice == 1) {
+            cart.displayProducts();
+            int productId;
+            getValidInput(productId, "Enter Product ID to add to cart: ");
+            cart.addProduct(productId);
+        } else if (choice == 2) {
+            cart.viewCart();
+        }
+    } while (choice != 3);
+
+    cout << "Thank you for shopping!" << endl;
+    return 0;
+}
